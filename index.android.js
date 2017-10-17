@@ -13,7 +13,7 @@ import {
 import TabNavigator from 'react-native-tab-navigator';
 // cmd项目路径下执行npm install react-native-tab-navigator --save
 import Home from './main/tabhost/TabIndex'
-import Second from './main/tabhost/Tab2'
+import Second from './main/tabhost/TabProductCategory'
 import Three from './main/tabhost/Tab3'
 import Personal from './main/tabhost/TabPersonal'
 
