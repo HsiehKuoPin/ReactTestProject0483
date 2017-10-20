@@ -10,20 +10,51 @@ import {
     ToastAndroid,
     Dimensions,
 } from 'react-native';
-import ModulesGuideView from '../widgets/ModulesGuideView'
-import LoadMoreFooter from '../widgets/LoadMoreFooterView'
-//npm install react-native-gifted-listview --save
-// import GiftedListView from 'react-native-gifted-listview';
-import GiftedListView from '../widgets/GiftedListView'
-// npm install react-native-swiper --save
+import ModulesGuideView from '../../widgets/ModulesGuideView';
+import LoadMoreFooter from '../../widgets/LoadMoreFooterView';
+import GiftedListView from '../../widgets/RefreshListView';
 import Swiper from 'react-native-swiper';
+import styles from '../../styles/style_tab_index';
+
+var CommonRequest = require('../../../common/CommonRequest');
 
 const {width} = Dimensions.get('window');
 
 class TabIndex extends Component {
 
+
     constructor(props) {
         super(props);
+        this.state = {
+            firstLoad: true,//是否第一次加载
+            haveInitDefData: false,
+            data: [],
+        };
+    }
+
+    /**
+     * 刷新数据
+     * @param callback
+     * @param options
+     * @private
+     */
+    _onRefresh(callback, options) {
+        var body = {
+            "phone_imei": "357615696645247",
+            "platform": "android",
+            "version": "1.3.0"
+        };
+        CommonRequest.post("http://mall.dev-yijia.weimain.com/app_1_1/main/index?psid=8000", body)
+            .then((responseData) => {
+                // console.log("回调在外--------------面的数据：" + JSON.stringify(responseData));
+                console.log("回调在外面的数据");
+                var rows = [];
+                rows.push({"data": responseData.obj.listImg, 'index': 0});
+                rows.push({"data": "", 'index': 1});
+                rows.push({"data": "", 'index': 2});
+                rows.push({"data": "", 'index': 3});
+                callback(rows, {isShowFirstLoadView: false,});
+            });
     }
 
     /**
@@ -35,26 +66,30 @@ class TabIndex extends Component {
      */
     _onFetch(page = 1, callback, options) {
 
-        console.log("page:" + page)
         setTimeout(() => {
-            var index1 = ((page - 1) * 5 + 0);
-            var index2 = ((page - 1) * 5 + 1);
-            var index3 = ((page - 1) * 5 + 2);
-            var index4 = ((page - 1) * 5 + 3);
-            var index5 = ((page - 1) * 5 + 4);
-            var rows = [{'data': 'row ' + ((page - 1) * 5 + 1), 'index': index1},
-                {'data': 'row ' + ((page - 1) * 5 + 2), 'index': index2},
-                {'data': 'row ' + ((page - 1) * 5 + 3), 'index': index3},
-                {'data': 'row ' + ((page - 1) * 5 + 4), 'index': index4},
-                {'data': 'row ' + ((page - 1) * 5 + 5), 'index': index5}];
-            // rows = [];
+            var rows = [];
+            rows.push({'data': '', 'isFirst':(page === 1)});
+            for (var i = 0; i < 10; i++) {
+                rows.push({'data': ''});
+            }
             if (page === 4) {
                 // the end of the list is reached
                 callback(rows, {allLoaded: true,});
             } else {
                 callback(rows);
             }
-        }, 1000); // simulating network fetching
+        }, 3000); // simulating network fetching
+    }
+
+    /**
+     * 加载猜你喜欢数据
+     * @param page
+     * @param callback
+     * @param options
+     * @private
+     */
+    _loadGuessProductList(page = 1, callback, options) {
+
     }
 
     /**
@@ -84,19 +119,16 @@ class TabIndex extends Component {
         return <LoadMoreFooter isLoadAll={true}/>
     }
 
-    _toEnd(){
-        console.log("已经滑动到底部++++++");
-
-    }
-
     render() {
         return (
             <View style={styles.container}>
-                {/*<View style={styles.navBar} />*/}
+
                 <GiftedListView
+                    ref="giftedListView"
                     rowView={this._renderRowView}
                     onFetch={this._onFetch}
-                    firstLoader={true} // display a loader for the first fetching
+                    onRefresh={this._onRefresh}
+                    firstLoader={false} // display a loader for the first fetching
                     pagination={true} // enable infinite scrolling using touch to load more
                     refreshable={true} // enable pull-to-refresh for iOS and touch-to-refresh for Android
                     withSections={false} // enable sections
@@ -104,12 +136,8 @@ class TabIndex extends Component {
                     isMounted={false}
                     // onEndReached={ this._toEnd }
                     // onEndReachedThreshold={0}
+                    isShowFirstLoadView={true}
                     enableEmptySections={true}
-                    customStyles={{
-                        paginationView: {
-                            backgroundColor: '#C7C7C7',
-                        },
-                    }}
 
                     refreshableTintColor="blue"
                 />
@@ -125,9 +153,9 @@ class RowView extends Component {
 
     render() {
         var index = this.props.rowData.index;
-
+        console.log("index:" + index + ",isFirst:" + this.props.rowData.isFirst);
         if (index === 0) {//广告轮播图
-            return (<AdsSwiper/>);
+            return (<AdsSwiper data={this.props.rowData.data}/>);
         } else if (index === 1) {//功能入口
             return (<ModulesGuideView/>);
         } else if (index === 2) {//特别精选
@@ -136,7 +164,7 @@ class RowView extends Component {
             return (<BrandSelectedView/>)
         } else {
             return (
-                <GuessDataView isFirst={index === 4}/>
+                <GuessDataView isFirst={this.props.rowData.isFirst}/>
             )
         }
     };
@@ -153,14 +181,19 @@ class AdsSwiper extends Component {
     constructor(props) {
         super(props)
         this.state = {
-            imgList: [
-                'http://bonn.qiniudn.com/images/Company/20171011/20171011140122505.jpg?imageView2/2/q/100/w/640/h/320',
-                'http://bonn.qiniudn.com/images/Company/20171011/20171011140204889.jpg?imageView2/2/q/100/w/640/h/320',
-                'http://bonn.qiniudn.com/images/Company/20171011/20171011140306194.jpg?imageView2/2/q/100/w/640/h/320',
-                'http://bonn.qiniudn.com/images/Company/20171011/20171011140438548.jpg?imageView2/2/q/100/w/640/h/320'
-            ],
-            loadQueue: [0, 0, 0, 0]
-        }
+            // imgList: [
+            //     'http://bonn.qiniudn.com/images/Company/20171011/20171011140122505.jpg?imageView2/2/q/100/w/640/h/320',
+            //     'http://bonn.qiniudn.com/images/Company/20171011/20171011140204889.jpg?imageView2/2/q/100/w/640/h/320',
+            //     'http://bonn.qiniudn.com/images/Company/20171011/20171011140306194.jpg?imageView2/2/q/100/w/640/h/320',
+            //     'http://bonn.qiniudn.com/images/Company/20171011/20171011140438548.jpg?imageView2/2/q/100/w/640/h/320'
+            // ],
+            // loadQueue: [0, 0, 0, 0]
+        };
+
+        this.props.data.map((item,i)=>{
+           console.log(item.urlImg);
+        });
+
     }
 
     render() {
@@ -186,8 +219,8 @@ class AdsSwiper extends Component {
                             marginRight: 4
                         }}/>}>
                     {
-                        this.state.imgList.map((item, i) =>
-                            <Image key={i} style={styles.image} source={{uri: item}}/>
+                        this.props.data.map((item, i) =>
+                            <Image key={i} style={styles.image} source={{uri: item.urlImg}}/>
                         )
                     }
                 </Swiper>
@@ -244,10 +277,10 @@ class BrandSelectedView extends Component {
                 <Text style={styles.modulesTip}>品牌精选
                     | BRAND</Text>
                 <View style={{flexDirection: 'row'}}>
-                    <Image style={{flex: 2}}
+                    <Image style={{flex: 1}}
                            source={{uri: 'http://bonn.qiniudn.com/images/Company/20170522/20170522114114898.jpg'}}/>
-                    <View style={{flex: 1, marginLeft: 5, backgroundColor: 'white'}}>
-                        <Image style={{width: 120, height: 120}}
+                    <View style={{marginLeft: 5, backgroundColor: 'white'}}>
+                        <Image style={styles.SpeciallyProductItem}
                                source={{uri: 'http://bonn.qiniudn.com/images/Company/20161022/20161022172815473.jpg'}}/>
                         <View style={{padding: 10}}>
                             <Text style={styles.productItemText}>健来福</Text>
@@ -258,7 +291,7 @@ class BrandSelectedView extends Component {
                 </View>
                 <View style={{flexDirection: 'row', marginTop: 5}}>
                     <View style={{backgroundColor: 'white'}}>
-                        <Image style={{width: 120, height: 120}}
+                        <Image style={styles.SpeciallyProductItem}
                                source={{uri: 'http://bonn.qiniudn.com/images/Company/20161022/20161022172815473.jpg'}}/>
                         <View style={{padding: 10}}>
                             <Text style={styles.productItemText}>健来福</Text>
@@ -267,7 +300,7 @@ class BrandSelectedView extends Component {
                         </View>
                     </View>
                     <View style={{marginLeft: 5, backgroundColor: 'white'}}>
-                        <Image style={{width: 120, height: 120}}
+                        <Image style={styles.SpeciallyProductItem}
                                source={{uri: 'http://bonn.qiniudn.com/images/Company/20161022/20161022172815473.jpg'}}/>
                         <View style={{padding: 10}}>
                             <Text style={styles.productItemText}>健来福</Text>
@@ -276,7 +309,7 @@ class BrandSelectedView extends Component {
                         </View>
                     </View>
                     <View style={{marginLeft: 5, backgroundColor: 'white'}}>
-                        <Image style={{width: 120, height: 120}}
+                        <Image style={styles.SpeciallyProductItem}
                                source={{uri: 'http://bonn.qiniudn.com/images/Company/20161022/20161022172815473.jpg'}}/>
                         <View style={{padding: 10}}>
                             <Text style={styles.productItemText}>健来福</Text>
@@ -329,43 +362,48 @@ class GuessDataView extends Component {
     }
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        // backgroundColor: '#FFF',
-        backgroundColor: '#ECECEC'
-    },
-    navBar: {
-        height: 64,
-        backgroundColor: '#CCC'
-    },
-    row: {
-        // padding: 10,
-        // height: 44,
-    },
-    wrapper: {
-        width,
-        height: 150,
-    },
-
-    image: {
-        width,
-        height: 150,
-    },
-    productItemText: {
-        fontSize: 13, color: 'black', textAlign: 'center'
-    },
-    productItemPrice: {
-        fontSize: 16,
-        color: '#dab26a',
-        marginTop: 5,
-        textAlign: 'center'
-    },
-    modulesTip: {fontSize: 16, color: 'black', fontWeight: 'bold', padding: 10, textAlign: 'center'},
-    guessImage: {
-        width: (width - 15) / 2,
-        height: (width - 15) / 2,
-    }
-});
+// const styles = StyleSheet.create({
+//     container: {
+//         flex: 1,
+//         // backgroundColor: '#FFF',
+//         backgroundColor: '#ECECEC'
+//     },
+//     navBar: {
+//         height: 64,
+//         backgroundColor: '#CCC'
+//     },
+//     row: {
+//         // padding: 10,
+//         // height: 44,
+//     },
+//     wrapper: {
+//         width,
+//         height: 150,
+//     },
+//
+//     image: {
+//         width,
+//         height: 150,
+//     },
+//     productItemText: {
+//         fontSize: 13, color: 'black', textAlign: 'center'
+//     },
+//     productItemPrice: {
+//         fontSize: 16,
+//         color: '#dab26a',
+//         marginTop: 5,
+//         textAlign: 'center'
+//     },
+//     modulesTip: {fontSize: 16, color: 'black', fontWeight: 'bold', padding: 10, textAlign: 'center'},
+//     guessImage: {
+//         width: (width - 15) / 2,
+//         height: (width - 15) / 2,
+//     },
+//     SpeciallyProductItem:{
+//         width:(width - 10 )/3,
+//         height:(width - 10)/3
+//     }
+//
+// });
 
 module.exports = TabIndex;

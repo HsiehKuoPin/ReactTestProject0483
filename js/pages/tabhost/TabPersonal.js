@@ -22,23 +22,23 @@ class PersonalIndex extends Component{
                 <View style={styles.allOrder}>
                     <Text style={styles.allOrderLeft}>我的订单</Text>
                     <Text style={styles.allOrderRight}>查看全部订单</Text>
-                    <Image style={styles.allOrderArrow} source={require('../../img/ic_arrow_forward.png')}/>
+                    <Image style={styles.allOrderArrow} source={require('../../../img/ic_arrow_forward.png')}/>
                 </View>
                 <View style={styles.orderGuideLayout}>
                     <View style={styles.orderGuideItem}>
-                        <Image style={styles.orderGuideItemImage} source={require('../../img/personal/ic_pending_payment.png')}/>
+                        <Image style={styles.orderGuideItemImage} source={require('../../../img/personal/ic_pending_payment.png')}/>
                         <Text style={styles.orderGuideItemText}>待支付</Text>
                     </View>
                     <View style={styles.orderGuideItem}>
-                        <Image style={styles.orderGuideItemImage} source={require('../../img/personal/ic_waiting_for_delivery.png')}/>
+                        <Image style={styles.orderGuideItemImage} source={require('../../../img/personal/ic_waiting_for_delivery.png')}/>
                         <Text style={styles.orderGuideItemText}>待发货</Text>
                     </View>
                     <View style={styles.orderGuideItem}>
-                        <Image style={styles.orderGuideItemImage} source={require('../../img/personal/ic_already_shipped.png')}/>
+                        <Image style={styles.orderGuideItemImage} source={require('../../../img/personal/ic_already_shipped.png')}/>
                         <Text style={styles.orderGuideItemText}>待收货</Text>
                     </View>
                     <View style={styles.orderGuideItem}>
-                        <Image style={styles.orderGuideItemImage} source={require('../../img/personal/ic_pending_evaluation.png')}/>
+                        <Image style={styles.orderGuideItemImage} source={require('../../../img/personal/ic_pending_evaluation.png')}/>
                         <Text style={styles.orderGuideItemText}>已完成</Text>
                     </View>
                 </View>

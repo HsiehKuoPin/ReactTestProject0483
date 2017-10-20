@@ -8,6 +8,7 @@ var {
     TouchableHighlight,
     View,
     Text,
+    Image,
     RefreshControl,
 } = require('react-native');
 
@@ -28,14 +29,13 @@ function MergeRecursive(obj1, obj2) {
     return obj1;
 }
 
-var GiftedSpinner = require('react-native-gifted-spinner');
-
 var GiftedListView = React.createClass({
 
     getDefaultProps() {
         return {
             customStyles: {},
             initialListSize: 10,
+            isShowFirstLoadView: false,
             firstLoader: true,
             pagination: true,
             refreshable: true,
@@ -52,18 +52,24 @@ var GiftedListView = React.createClass({
             onFetch(page, callback, options) {
                 callback([]);
             },
+            onRefresh(callback, options) {
+                callback([]);
+            },
+            initDefData: [],
 
             paginationFetchingView: null,
             paginationAllLoadedView: null,
             paginationWaitingView: null,
             emptyView: null,
             renderSeparator: null,
+            showFirstLoadView: null,
         };
     },
 
     propTypes: {
         customStyles: React.PropTypes.object,
         initialListSize: React.PropTypes.number,
+        isShowFirstLoadView: React.PropTypes.bool,
         firstLoader: React.PropTypes.bool,
         pagination: React.PropTypes.bool,
         refreshable: React.PropTypes.bool,
@@ -78,12 +84,14 @@ var GiftedListView = React.createClass({
         scrollEnabled: React.PropTypes.bool,
         withSections: React.PropTypes.bool,
         onFetch: React.PropTypes.func,
+        onRefresh: React.PropTypes.func,
 
         paginationFetchingView: React.PropTypes.func,
         paginationAllLoadedView: React.PropTypes.func,
         paginationWaitingView: React.PropTypes.func,
         emptyView: React.PropTypes.func,
         renderSeparator: React.PropTypes.func,
+        showFirstLoadView: React.PropTypes.func,
     },
 
     _setPage(page) {
@@ -99,7 +107,10 @@ var GiftedListView = React.createClass({
         return this._rows;
     },
 
-
+    /**
+     * 加载更多数据中
+     * @returns {XML}
+     */
     paginationFetchingView() {
         if (this.props.paginationFetchingView) {
             return this.props.paginationFetchingView();
@@ -107,10 +118,17 @@ var GiftedListView = React.createClass({
 
         return (
             <View style={[this.defaultStyles.paginationView, this.props.customStyles.paginationView]}>
-                <GiftedSpinner/>
+                <Text style={[this.defaultStyles.actionsLabel, this.props.customStyles.actionsLabel]}>
+                    加载数据中...
+                </Text>
             </View>
         );
     },
+
+    /**
+     * 所有数据已经加载完毕
+     * @returns {XML}
+     */
     paginationAllLoadedView() {
         if (this.props.paginationAllLoadedView) {
             return this.props.paginationAllLoadedView();
@@ -119,7 +137,7 @@ var GiftedListView = React.createClass({
         return (
             <View style={[this.defaultStyles.paginationView, this.props.customStyles.paginationView]}>
                 <Text style={[this.defaultStyles.actionsLabel, this.props.customStyles.actionsLabel]}>
-                    ~
+                    已经没有更多数据
                 </Text>
             </View>
         );
@@ -133,10 +151,9 @@ var GiftedListView = React.createClass({
             <TouchableHighlight
                 underlayColor='#c8c7cc'
                 onPress={paginateCallback}
-                style={[this.defaultStyles.paginationView, this.props.customStyles.paginationView]}
-            >
+                style={[this.defaultStyles.paginationView, this.props.customStyles.paginationView]}>
                 <Text style={[this.defaultStyles.actionsLabel, this.props.customStyles.actionsLabel]}>
-                    加载数据中...
+                    点击加载
                 </Text>
             </TouchableHighlight>
         );
@@ -155,15 +172,14 @@ var GiftedListView = React.createClass({
         return (
             <View style={[this.defaultStyles.defaultView, this.props.customStyles.defaultView]}>
                 <Text style={[this.defaultStyles.defaultViewTitle, this.props.customStyles.defaultViewTitle]}>
-                    Sorry, there is no content to display
+                    对不起，当前没有可以显示的数据
                 </Text>
 
                 <TouchableHighlight
                     underlayColor='#c8c7cc'
-                    onPress={refreshCallback}
-                >
+                    onPress={refreshCallback}>
                     <Text>
-                        ↻
+                        点击刷新
                     </Text>
                 </TouchableHighlight>
             </View>
@@ -193,6 +209,7 @@ var GiftedListView = React.createClass({
                 dataSource: ds.cloneWithRowsAndSections(this._getRows()),
                 isRefreshing: false,
                 paginationStatus: 'firstLoad',
+                isShowFirstLoadView: this.props.isShowFirstLoadView,
             };
         } else {
             ds = new ListView.DataSource({
@@ -202,13 +219,35 @@ var GiftedListView = React.createClass({
                 dataSource: ds.cloneWithRows(this._getRows()),
                 isRefreshing: false,
                 paginationStatus: 'firstLoad',
+                isShowFirstLoadView: this.props.isShowFirstLoadView,
             };
         }
     },
 
-    componentDidMount() {
-        this.props.onFetch(this._getPage(), this._postRefresh, {firstLoad: true});
+    /**
+     * 显示第一次加载页面
+     * @returns {XML}
+     */
+    showFirstLoadView() {
+        if (this.props.isShowFirstLoadView) {
+            this.props.onRefresh(this.addRowAndUpdateState);
+        }
     },
+
+
+    /**
+     * 添加到数据且更新UI
+     * @param rows
+     * @param options
+     */
+    addRowAndUpdateState(rows = [], options = {}) {
+        this.state.isShowFirstLoadView = options.isShowFirstLoadView;
+        this._updateRows(rows, options);
+    },
+
+    // componentDidMount() {
+    //     this.props.onFetch(this._getPage(), this._postRefresh, {firstLoad: true});
+    // },
 
     setNativeProps(props) {
         this.refs.listview.setNativeProps(props);
@@ -219,19 +258,21 @@ var GiftedListView = React.createClass({
     },
 
     _onRefresh(options = {}) {
-        if (this.isMounted()) {
+        // if (this.isMounted()) {
             this.setState({
                 isRefreshing: true,
             });
             this._setPage(1);
-            this.props.onFetch(this._getPage(), this._postRefresh, options);
-        }
+            // this.props.onFetch(this._getPage(), this._postRefresh, options);
+            this.props.onRefresh(this.addRowAndUpdateState,options);
+
+        // }
     },
 
     _postRefresh(rows = [], options = {}) {
-        if (this.isMounted()) {
+        // if (this.isMounted()) {
             this._updateRows(rows, options);
-        }
+        // }
     },
 
     _onPaginate() {
@@ -241,13 +282,12 @@ var GiftedListView = React.createClass({
             this.setState({
                 paginationStatus: 'fetching',
             });
-            this._setPage(this._getPage() + 1);
             this.props.onFetch(this._getPage(), this._postPaginate, {});
         }
     },
 
     _postPaginate(rows = [], options = {}) {
-        // this._setPage(this._getPage() + 1);
+        this._setPage(this._getPage() + 1);
         var mergedRows = null;
         if (this.props.withSections === true) {
             mergedRows = MergeRecursive(this._getRows(), rows);
@@ -312,57 +352,72 @@ var GiftedListView = React.createClass({
         );
     },
 
-    _toEnd(){
+    _toEnd() {
         console.log("0000000底部0000000000");
         // console.log("this._getPage()：" + this._getPage());
         //第一页的时候不触发加载下一页加载事件
-        // if(this._getPage() !== 1){
+        if(!this.state.isShowFirstLoadView){
             this._onPaginate(this._getPage(), this._postPaginate, {});
-        // }
-        console.log("0000000底部0000000000");
+        }
     },
 
     render() {
-        return (
-            <ListView
-                ref="listview"
-                dataSource={this.state.dataSource}
-                renderRow={this.props.rowView}
-                renderSectionHeader={this.props.sectionHeaderView}
-                renderHeader={this.headerView}
-                renderFooter={this._renderPaginationView}
-                renderSeparator={this.renderSeparator}
-                removeClippedSubviews={false}
 
-                automaticallyAdjustContentInsets={false}
-                scrollEnabled={this.props.scrollEnabled}
-                canCancelContentTouches={true}
-                refreshControl={this.props.refreshable === true ? this.renderRefreshControl() : null}
-                enableEmptySections={true}
+        // console.log("this.state.isShowFirstLoadView:" + this.state.isShowFirstLoadView);
+        // if(this.state.isShowFirstLoadView){
+        //     this.showFirstLoadView();
+        // }
+            return (
+                <View style={{flex:1}}>
+                    {
+                        this.state.isShowFirstLoadView ? (
 
-                onEndReached={ this._toEnd }
-                onEndReachedThreshold={20}
+                            <View style={{alignItems: 'center', flex: 1, justifyContent: 'center'}}>
+                                <Image onLoad={this.showFirstLoadView} source={require('../../img/loading.gif')} style={{width: 80, height: 80,}}/>
+                            </View>
+                        ) : (
+                            <ListView
+                                ref="listview"
+                                dataSource={this.state.dataSource}
+                                renderRow={this.props.rowView}
+                                renderSectionHeader={this.props.sectionHeaderView}
+                                renderHeader={this.headerView}
+                                renderFooter={this._renderPaginationView}
+                                renderSeparator={this.renderSeparator}
+                                removeClippedSubviews={false}
 
-                {...this.props}
+                                automaticallyAdjustContentInsets={false}
+                                scrollEnabled={this.props.scrollEnabled}
+                                canCancelContentTouches={true}
+                                refreshControl={this.props.refreshable === true ? this.renderRefreshControl() : null}
+                                enableEmptySections={true}
 
-                style={this.props.style}
-            />
-        );
+                                onEndReached={this._toEnd}
+                                onEndReachedThreshold={20}
+
+                                {...this.props}
+
+                                style={this.props.style}
+                            />
+                        )
+                    }
+                </View>
+
+            );
+
     },
 
     defaultStyles: {
         separator: {
             height: 1,
-            backgroundColor: '#CCC'
         },
         actionsLabel: {
-            fontSize: 20,
+            fontSize: 12,
         },
         paginationView: {
-            height: 44,
+            height: 40,
             justifyContent: 'center',
             alignItems: 'center',
-            backgroundColor: '#FFF',
         },
         defaultView: {
             justifyContent: 'center',
@@ -370,7 +425,8 @@ var GiftedListView = React.createClass({
             padding: 20,
         },
         defaultViewTitle: {
-            fontSize: 16,
+            fontSize: 13,
+            color: 'black',
             fontWeight: 'bold',
             marginBottom: 15,
         },

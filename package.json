@@ -9,9 +9,8 @@
 	"dependencies": {
 		"react": "16.0.0-alpha.12",
 		"react-native": "^0.48.3",
-		"react-native-gifted-listview": "0.0.15",
-		"react-native-swiper": "^1.5.13",
-		"react-native-tab-navigator": "^0.3.4"
+		"react-native-deprecated-custom-components": "^0.1.1",
+		"react-native-gifted-listview": "0.0.15"
 	},
 	"devDependencies": {
 		"babel-jest": "21.2.0",
